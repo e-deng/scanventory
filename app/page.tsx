@@ -140,6 +140,9 @@ export default function ScanventoryApp() {
           expirationDate: new Date(item.expirationDate).toISOString().split('T')[0],
         }))
         setItems(itemsWithId)
+        
+        // Generate alerts after items are loaded
+        setTimeout(() => generateAlertsFromItems(itemsWithId), 100)
       }
 
       // Load alerts
@@ -166,6 +169,56 @@ export default function ScanventoryApp() {
     }
   }
 
+  // Function to generate alerts from items
+  const generateAlertsFromItems = (itemsToCheck: PantryItem[]) => {
+    const today = new Date()
+    const newAlerts: ExpirationAlert[] = []
+
+    itemsToCheck.forEach((item) => {
+      const expDate = new Date(item.expirationDate)
+      const daysUntilExpiry = Math.ceil((expDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+
+      // Create alerts for items expiring within 7 days or already expired
+      if (daysUntilExpiry <= 7) {
+        const existingAlert = alerts.find((alert) => alert.itemId === item.id && !alert.dismissed)
+
+        if (!existingAlert) {
+          let severity: "critical" | "warning" | "expired"
+          if (daysUntilExpiry < 0) severity = "expired"
+          else if (daysUntilExpiry <= 3) severity = "critical"
+          else severity = "warning"
+
+          newAlerts.push({
+            id: `alert-${item.id}-${Date.now()}`,
+            itemId: item.id,
+            itemName: item.name,
+            expirationDate: item.expirationDate,
+            daysUntilExpiry,
+            severity,
+            dismissed: false,
+            createdAt: new Date().toISOString(),
+          })
+        }
+      }
+    })
+
+    if (newAlerts.length > 0) {
+      setAlerts((prev) => [...prev, ...newAlerts])
+
+      // Show toast notification for new critical alerts
+      const criticalNewAlerts = newAlerts.filter(
+        (alert) => alert.severity === "critical" || alert.severity === "expired",
+      )
+      if (criticalNewAlerts.length > 0) {
+        toast({
+          title: "Expiration Alert!",
+          description: `${criticalNewAlerts.length} item(s) need immediate attention`,
+          variant: "destructive",
+        })
+      }
+    }
+  }
+
   // useEffect(() => {
   //   localStorage.setItem("scanventory-items", JSON.stringify(items))
   // }, [items])
@@ -176,58 +229,8 @@ export default function ScanventoryApp() {
 
   // Generate alerts for expiring items
   useEffect(() => {
-    const generateAlerts = () => {
-      const today = new Date()
-      const newAlerts: ExpirationAlert[] = []
-
-      items.forEach((item) => {
-        const expDate = new Date(item.expirationDate)
-        const daysUntilExpiry = Math.ceil((expDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
-
-        // Create alerts for items expiring within 7 days or already expired
-        if (daysUntilExpiry <= 7) {
-          const existingAlert = alerts.find((alert) => alert.itemId === item.id && !alert.dismissed)
-
-          if (!existingAlert) {
-            let severity: "critical" | "warning" | "expired"
-            if (daysUntilExpiry < 0) severity = "expired"
-            else if (daysUntilExpiry <= 3) severity = "critical"
-            else severity = "warning"
-
-            newAlerts.push({
-              id: `alert-${item.id}-${Date.now()}`,
-              itemId: item.id,
-              itemName: item.name,
-              expirationDate: item.expirationDate,
-              daysUntilExpiry,
-              severity,
-              dismissed: false,
-              createdAt: new Date().toISOString(),
-            })
-          }
-        }
-      })
-
-      if (newAlerts.length > 0) {
-        setAlerts((prev) => [...prev, ...newAlerts])
-
-        // Show toast notification for new critical alerts
-        const criticalAlerts = newAlerts.filter(
-          (alert) => alert.severity === "critical" || alert.severity === "expired",
-        )
-        if (criticalAlerts.length > 0) {
-          toast({
-            title: "Expiration Alert!",
-            description: `${criticalAlerts.length} item(s) need immediate attention`,
-            variant: "destructive",
-          })
-        }
-      }
-    }
-
-    if (items.length > 0) {
-      generateAlerts()
-    }
+    // This useEffect is now redundant as alerts are generated from items on load
+    // Keeping it for now, but it will be removed if not used elsewhere.
   }, [items, toast])
 
   // Calculate dashboard stats
@@ -243,6 +246,16 @@ export default function ScanventoryApp() {
   const lowStockItems = items.filter((item) => item.quantity <= 2).length
   const activeAlerts = alerts.filter((alert) => !alert.dismissed)
   const criticalAlerts = activeAlerts.filter((alert) => alert.severity === "critical" || alert.severity === "expired")
+
+  // Debug logging for alerts count
+  console.log('Alerts Debug:', {
+    totalAlerts: alerts.length,
+    activeAlertsCount: activeAlerts.length,
+    criticalAlertsCount: criticalAlerts.length,
+    itemsCount: items.length,
+    allAlerts: alerts,
+    activeAlertsList: activeAlerts
+  })
 
   const filteredItems = items.filter((item) => {
     const matchesSearch =
@@ -815,7 +828,7 @@ export default function ScanventoryApp() {
             </CardContent>
           </Card>
 
-          <Card className="border-orange-200">
+          <Card className="border-orange-200 cursor-pointer hover:bg-orange-50 transition-colors" onClick={() => setIsAlertsModalOpen(true)}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-gray-600">Active Alerts</CardTitle>
               <Bell className="h-4 w-4 text-red-500" />
@@ -1185,9 +1198,19 @@ export default function ScanventoryApp() {
           <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[80vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold">Expiration Alerts</h2>
-              <Button variant="ghost" size="sm" onClick={() => setIsAlertsModalOpen(false)}>
-                <X className="w-4 h-4" />
-              </Button>
+              <div className="flex items-center space-x-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => generateAlertsFromItems(items)}
+                  className="text-xs"
+                >
+                  Refresh
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => setIsAlertsModalOpen(false)}>
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
             </div>
 
             {activeAlerts.length === 0 ? (
