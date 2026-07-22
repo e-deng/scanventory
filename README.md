@@ -63,12 +63,17 @@ You can test the application with these sample barcodes:
 
 ## API Endpoints
 
-- `GET /api/items` - Get all pantry items
+- `GET /api/items` - Get all pantry items (supports `shelf`, `category`, `search`, `sortBy`, `order` query params)
 - `POST /api/items` - Create a new item
+- `GET /api/items/:id` - Get a single item
 - `PUT /api/items/:id` - Update an item
-- `DELETE /api/items/:id` - Delete an item
-- `GET /api/alerts` - Get expiration alerts
-- `PUT /api/alerts/:id/dismiss` - Dismiss an alert
+- `DELETE /api/items/:id` - Delete an item (also removes its alerts)
+- `POST /api/items/scan` - Scan a barcode in/out (creates or updates an item, looks up demo product info)
+- `GET /api/alerts` - Get expiration alerts (supports `dismissed`, `severity` query params)
+- `PUT /api/alerts/:id/dismiss` - Dismiss a single alert
+- `PUT /api/alerts/dismiss-all` - Dismiss all active alerts
+- `POST /api/alerts/generate` - Recompute alerts for all items nearing/past expiration
+- `GET /api/health` - Health check
 
 ## Technologies Used
 
@@ -76,7 +81,7 @@ You can test the application with these sample barcodes:
 - Next.js 15
 - React 19
 - TypeScript
-- Tailwind CSS
+- Tailwind CSS 4
 - shadcn/ui components
 
 ### Backend
@@ -91,6 +96,13 @@ insert documents directly into your MongoDB database's `items` collection.
 ## Deploying to Vercel
 
 1. Push this repo to GitHub.
-2. Create a MongoDB Atlas cluster (free tier is fine) and get its connection string.
-3. Import the repo in Vercel and set the `MONGODB_URI` environment variable.
-4. Deploy — the frontend and API routes ship together as one Vercel project. 
+2. Create a MongoDB Atlas cluster (free tier is fine), create a database user,
+   and allow network access from `0.0.0.0/0` (Vercel's serverless functions use
+   dynamic IPs).
+3. Get your connection string from Atlas and append your database name, e.g.
+   `mongodb+srv://<user>:<password>@<cluster>.mongodb.net/scanventory?retryWrites=true&w=majority`.
+4. Import the repo in Vercel (or run `vercel link`), then set the `MONGODB_URI`
+   environment variable for the Production, Preview, and Development
+   environments.
+5. Deploy with `vercel --prod` (or push to your connected Git branch) — the
+   frontend and API routes ship together as a single Vercel project. 
