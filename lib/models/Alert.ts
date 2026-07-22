@@ -1,9 +1,19 @@
-const mongoose = require("mongoose")
+import mongoose, { Schema, type Document, type Model } from "mongoose"
 
-const alertSchema = new mongoose.Schema(
+export interface IAlert extends Document {
+  itemId: mongoose.Types.ObjectId
+  itemName: string
+  expirationDate: Date
+  daysUntilExpiry: number
+  severity: "critical" | "warning" | "expired"
+  dismissed: boolean
+  userId?: mongoose.Types.ObjectId
+}
+
+const alertSchema = new Schema<IAlert>(
   {
     itemId: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: Schema.Types.ObjectId,
       ref: "Item",
       required: true,
     },
@@ -29,9 +39,9 @@ const alertSchema = new mongoose.Schema(
       default: false,
     },
     userId: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: Schema.Types.ObjectId,
       ref: "User",
-      required: false, // No longer required since we removed authentication
+      required: false,
     },
   },
   {
@@ -39,9 +49,8 @@ const alertSchema = new mongoose.Schema(
   },
 )
 
-// Index for efficient queries
 alertSchema.index({ dismissed: 1 })
 alertSchema.index({ severity: 1 })
 alertSchema.index({ itemId: 1 })
 
-module.exports = mongoose.model("Alert", alertSchema)
+export const Alert: Model<IAlert> = mongoose.models.Alert || mongoose.model<IAlert>("Alert", alertSchema)

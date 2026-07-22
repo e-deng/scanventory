@@ -16,61 +16,36 @@ A smart pantry management application that allows you to track your pantry inven
 ```
 scanventory/
 ├── app/                 # Next.js frontend application
+├── app/api/             # Next.js API routes (backend, runs on Vercel)
 ├── components/          # React components
 ├── components/ui/       # UI components (Button, Card, Badge, etc.)
-├── lib/                 # Utility functions and API client
-├── server/              # Express.js backend API
-├── server/models/       # MongoDB models
-├── server/routes/       # API routes
+├── lib/                 # Utility functions, API client, MongoDB connection
+├── lib/models/           # Mongoose models (Item, Alert)
 └── README.md
 ```
 
+The app is a single full-stack Next.js project: the frontend and the API
+routes deploy together as one Vercel project, backed by MongoDB (Atlas in
+production).
+
 ## Setup Instructions
 
-### Backend Setup
-
-1. Navigate to the server directory:
-   ```bash
-   cd server
-   ```
-
-2. Install dependencies:
+1. Install dependencies:
    ```bash
    npm install
    ```
 
-3. Create a `.env` file with your MongoDB connection string:
+2. Create a `.env.local` file with your MongoDB connection string:
    ```bash
    MONGODB_URI=your_mongodb_connection_string
-   PORT=5000
-   NODE_ENV=development
    ```
 
-4. Start the backend server:
+3. Start the development server:
    ```bash
    npm run dev
    ```
 
-The backend will run on `http://localhost:5000`
-
-### Frontend Setup
-
-1. Navigate to the project root:
-   ```bash
-   cd ..
-   ```
-
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-
-3. Start the Next.js development server:
-   ```bash
-   npm run dev
-   ```
-
-The frontend will run on `http://localhost:3000`
+The app (frontend + API routes) will run on `http://localhost:3000`
 
 ## Usage
 
@@ -105,18 +80,17 @@ You can test the application with these sample barcodes:
 - shadcn/ui components
 
 ### Backend
-- Node.js
-- Express.js
+- Next.js API routes (app/api/)
 - MongoDB with Mongoose
-- CORS for cross-origin requests
 
 ## Database Seeding
 
-To populate the database with sample data:
+To populate the database with sample data, use the app's "Add Item" flow or
+insert documents directly into your MongoDB database's `items` collection.
 
-```bash
-cd server
-npm run seed
-```
+## Deploying to Vercel
 
-This will add 5 sample food items to your pantry for testing. 
+1. Push this repo to GitHub.
+2. Create a MongoDB Atlas cluster (free tier is fine) and get its connection string.
+3. Import the repo in Vercel and set the `MONGODB_URI` environment variable.
+4. Deploy — the frontend and API routes ship together as one Vercel project. 

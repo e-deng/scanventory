@@ -1,6 +1,17 @@
-const mongoose = require("mongoose")
+import mongoose, { Schema, type Document, type Model } from "mongoose"
 
-const itemSchema = new mongoose.Schema(
+export interface IItem extends Document {
+  name: string
+  quantity: number
+  shelf: string
+  expirationDate: Date
+  category: string
+  barcode?: string
+  addedDate: Date
+  userId?: mongoose.Types.ObjectId
+}
+
+const itemSchema = new Schema<IItem>(
   {
     name: {
       type: String,
@@ -61,9 +72,9 @@ const itemSchema = new mongoose.Schema(
       default: Date.now,
     },
     userId: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: Schema.Types.ObjectId,
       ref: "User",
-      required: false, // No longer required since we removed authentication
+      required: false,
     },
   },
   {
@@ -71,26 +82,27 @@ const itemSchema = new mongoose.Schema(
   },
 )
 
-// Index for efficient queries
 itemSchema.index({ shelf: 1 })
 itemSchema.index({ expirationDate: 1 })
 itemSchema.index({ barcode: 1 }, { sparse: true })
 
-// Virtual for days until expiry
-itemSchema.virtual("daysUntilExpiry").get(function () {
+itemSchema.virtual("daysUntilExpiry").get(function (this: IItem) {
   const today = new Date()
   const expiry = new Date(this.expirationDate)
-  const diffTime = expiry - today
+  const diffTime = expiry.getTime() - today.getTime()
   return Math.ceil(diffTime / (1000 * 60 * 60 * 24))
 })
 
-// Virtual for expiration status
-itemSchema.virtual("expirationStatus").get(function () {
-  const days = this.daysUntilExpiry
+itemSchema.virtual("expirationStatus").get(function (this: IItem) {
+  const today = new Date()
+  const expiry = new Date(this.expirationDate)
+  const diffTime = expiry.getTime() - today.getTime()
+  const days = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
   if (days < 0) return "expired"
   if (days <= 2) return "critical"
   if (days <= 7) return "warning"
   return "good"
 })
 
-module.exports = mongoose.model("Item", itemSchema)
+// Guard against model recompilation errors on hot reload / repeated serverless imports
+export const Item: Model<IItem> = mongoose.models.Item || mongoose.model<IItem>("Item", itemSchema)
